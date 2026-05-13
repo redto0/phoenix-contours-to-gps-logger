@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.8)
-project(phoenix-contours-to-gps-logger)
+project(phoenix_contours_to_gps_logger_node)
 include(FetchContent)
 
 if (CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
@@ -9,40 +9,52 @@ endif ()
 # find dependencies
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
+find_package(image_geometry REQUIRED)
 # Messages TODO_EXTRA
-find_package(ackermann_msgs REQUIRED)
+# find_package(ackermann_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
-find_package(std_msgs REQUIRED)
+find_package(nav_msgs REQUIRED)
+find_package(geometry_msgs REQUIRED)
+find_package(tf2_geometry_msgs REQUIRED)
 # OpenCV TODO_EXTRA
 find_package(cv_bridge REQUIRED)
 find_package(OpenCV 4.2.0 REQUIRED)
+find_package(phnx_msgs REQUIRED)
 
 # Add source for node executable (link non-ros dependencies here)
-add_executable(phoenix-contours-to-gps-logger src/TODO_NODE_NAME.cpp src/phoenix-contours-to-gps-logger_node.cpp)
-target_include_directories(phoenix-contours-to-gps-logger PUBLIC
+add_executable(phoenix_contours_to_gps_logger_node src/phoenix_contours_to_gps_logger.cpp src/phoenix_contours_to_gps_logger_node.cpp)
+target_include_directories(phoenix_contours_to_gps_logger_node PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
         $<INSTALL_INTERFACE:include>)
-target_compile_features(phoenix-contours-to-gps-logger PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
+target_compile_features(phoenix_contours_to_gps_logger_node PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
 
 # Make ros deps a variable so they get linked to tests as well
 set(dependencies
         rclcpp
         # Messages TODO_EXTRA
-        ackermann_msgs
+        # ackermann_msgs
         sensor_msgs
         std_msgs
+        nav_msgs
+        geometry_msgs
+        tf2_geometry_msgs
         # OpenCv TODO_EXTRA
         cv_bridge
         OpenCV
-        )
+        # for camera space transformation
+        image_geometry
+        # for custom msgs
+        phnx_msgs
+)
+
 
 # Link ros dependencies
 ament_target_dependencies(
-        phoenix-contours-to-gps-logger
+        phoenix_contours_to_gps_logger_node
         ${dependencies}
 )
 
-install(TARGETS phoenix-contours-to-gps-logger
+install(TARGETS phoenix_contours_to_gps_logger_node
         DESTINATION lib/${PROJECT_NAME})
 
 # Uncomment below to make launch files available if created
@@ -62,7 +74,7 @@ if (BUILD_TESTING)
     ament_add_gtest(${PROJECT_NAME}-test
             tests/unit.cpp
             # Remember to add node source files
-            src/phoenix-contours-to-gps-logger_node.cpp
+            src/phoenix_contours_to_gps_logger_node.cpp
             )
     ament_target_dependencies(${PROJECT_NAME}-test ${dependencies})
     target_include_directories(${PROJECT_NAME}-test PUBLIC
