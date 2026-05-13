@@ -2,7 +2,7 @@
 
 #include <rclcpp/rclcpp.hpp>
 
-#include "TODO_PACKAGE_NAME/TODO_NODE_NAME_node.hpp"
+#include "phoenix-contours-to-gps-logger/phoenix-contours-to-gps-logger_node.hpp"
 
 TEST(TODO_NODE_NAME, Test1) {}
 

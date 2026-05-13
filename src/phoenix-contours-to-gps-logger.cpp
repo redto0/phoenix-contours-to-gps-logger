@@ -1,4 +1,4 @@
-#include "TODO_PACKAGE_NAME/TODO_NODE_NAME_node.hpp"
+#include "phoenix-contours-to-gps-logger/phoenix-contours-to-gps-logger_node.hpp"
 
 int main(int argc, char** argv) {
     // Setup runtime

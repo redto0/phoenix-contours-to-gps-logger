@@ -1,4 +1,4 @@
-#include "TODO_PACKAGE_NAME/TODO_NODE_NAME_node.hpp"
+#include "phoenix-contours-to-gps-logger/phoenix-contours-to-gps-logger_node.hpp"
 
 // For _1
 using namespace std::placeholders;
@@ -23,5 +23,6 @@ TODO_NODE_NAME::TODO_NODE_NAME(const rclcpp::NodeOptions& options) : Node("TODO_
 
 void TODO_NODE_NAME::sub_cb(const std_msgs::msg::String::SharedPtr msg) {
     // Echo message
+
     this->pub->publish(*msg);
 }
