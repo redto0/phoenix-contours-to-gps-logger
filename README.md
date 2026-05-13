@@ -6,8 +6,8 @@ An opinionated ROS2 C++ node template, optimised for ISC.
 2. `rosdep install --from-paths . --ignore-src -r -y` to install deps
 3. `colcon build` to make sure the repo builds before you mess with it
 4. Replace the following in both file names and code exactly and consistently. 
-   1. phoenix-contours-to-gps-logger: Replace with the package name. Use snake case. Ex. `data_logger`
-   2. TODO_NODE_NAME: Replace with the node name. Use Pascal case. Ex. `DataLogger`
+   1. phoenix_contours_to_gps_logger_node: Replace with the package name. Use snake case. Ex. `data_logger`
+   2. phoenix_contours_to_gps_logger: Replace with the node name. Use Pascal case. Ex. `DataLogger`
 5. `colcon build` again. If it builds, you are done
 6. Rename outer folder
 7. Review the optional dependencies, and remove what you do not need
@@ -29,19 +29,19 @@ These are marked with TODO_EXTRA.
 ```
 .
 ├── include
-│   └── phoenix-contours-to-gps-logger
-│       └── phoenix-contours-to-gps-logger_node.hpp
+│   └── phoenix_contours_to_gps_logger_node
+│       └── phoenix_contours_to_gps_logger_node_node.hpp
 ├── package.xml
 ├── README.md
 ├── src
-│   ├── TODO_NODE_NAME.cpp
-│   └── phoenix-contours-to-gps-logger_node.cpp
+│   ├── phoenix_contours_to_gps_logger.cpp
+│   └── phoenix_contours_to_gps_logger_node_node.cpp
 └── tests
     └── unit.cpp
 ```
 
-phoenix-contours-to-gps-logger_node: Source files for the ROS2 node object itself, and only itself
+phoenix_contours_to_gps_logger_node_node: Source files for the ROS2 node object itself, and only itself
 
-TODO_NODE_NAME.cpp: Source for the main function of the node, and only the main function
+phoenix_contours_to_gps_logger.cpp: Source for the main function of the node, and only the main function
 
 tests/unit.cpp: Example file for unit tests. This is linked to the node and ros, so both can be used

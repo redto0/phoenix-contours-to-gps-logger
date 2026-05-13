@@ -2,9 +2,9 @@
 
 #include <rclcpp/rclcpp.hpp>
 
-#include "phoenix-contours-to-gps-logger/phoenix-contours-to-gps-logger_node.hpp"
+#include "phoenix_contours_to_gps_logger/phoenix_contours_to_gps_logger_node.hpp"
 
-TEST(TODO_NODE_NAME, Test1) {}
+TEST(phoenix_contours_to_gps_logger, Test1) {}
 
 int main(int argc, char** argv) {
     rclcpp::init(0, nullptr);
