@@ -7,21 +7,13 @@
 #include "geometry_msgs/msg/pose_stamped.hpp"
 #include "image_geometry/pinhole_camera_model.h"
 
-std::optional<nav_msgs::msg::Path> backend::create_path(std::vector<cv::Point2d>& left_contours,
-                                                        std::vector<cv::Point2d>& right_contours,
+std::optional<nav_msgs::msg::Path> backend::create_path(std::vector<cv::Point2d>& contours,
                                                         image_geometry::PinholeCameraModel& camera_info,
                                                         std::string frame_id) {
-    // take in contours
-    // DO NOT THE Polynomials
-    // Match the pointd...
-    // shortest side first larger side second.
-    // returns coefficients
-    // polyfit::FitPolynomial();
-
     // std::string_view is a string lol
-    std::vector<cv::Point2d> ground_path;  // this is the vector of path plannign points in cart space
-    std::vector<cv::Point2d> cam_path;     // this is the vector of path plannign points in camera space
-    ground_path.emplace_back(cv::Point2d(0, 0));
+    std::vector<cv::Point2d> ground_contours;  // this is the vector of path plannign points in cart space
+    std::vector<cv::Point2d> cam_path;         // this is the vector of path plannign points in camera space
+    // ground_contours.emplace_back(cv::Point2d(0, 0));
 
     int width = camera_info.fullResolution().width;    // camera space sizes!
     int height = camera_info.fullResolution().height;  // Camera space sizes!
@@ -29,25 +21,18 @@ std::optional<nav_msgs::msg::Path> backend::create_path(std::vector<cv::Point2d>
     bool is_right_valid = true;  // stores if Polynomial was intizatized!
     bool is_left_valid = true;   // left and right respectively
 
-    if (left_contours.empty()) {
+    if (contours.empty()) {
         // for any and all checks regarding data cleaning!
         // is_left_valid = false;
         return std::nullopt;
     }
 
     std::vector<cv::Point2d> bigger_array;
-    std::vector<cv::Point2d> smaller_array;
 
-    bigger_array = backend::cameraPixelToGroundPos(left_contours, camera_info);
+    bigger_array = backend::cameraPixelToGroundPos(contours, camera_info);
+    ground_contours = bigger_array;
 
-    for (int i = 0; i < bigger_array.size(); i++) {
-        double x = bigger_array[i].x;
-        double y = bigger_array[i].y - 1.80;
-
-        cam_path.push_back(cv::Point2d(x, y));
-    }
-
-    if (cam_path.empty()) {
+    if (ground_contours.empty()) {
         return std::nullopt;
     } else {
         // Convert from cv types to nav::msg
@@ -55,7 +40,7 @@ std::optional<nav_msgs::msg::Path> backend::create_path(std::vector<cv::Point2d>
         // TODO use tf2 to fnd the hieght
         // auto ground_points = backend::cameraPixelToGroundPos(cam_path, camera_info, 0.6, frame_id);
         nav_msgs::msg::Path msg{};
-        std::transform(cam_path.begin(), cam_path.end(), std::back_inserter(msg.poses),
+        std::transform(ground_contours.begin(), ground_contours.end(), std::back_inserter(msg.poses),
                        [&frame_id](const cv::Point2d& point) {
                            geometry_msgs::msg::PoseStamped pose{};
                            // frame = "redto0 isn't sure if we use this";
@@ -64,7 +49,6 @@ std::optional<nav_msgs::msg::Path> backend::create_path(std::vector<cv::Point2d>
                            pose.pose.position.x = point.x;
                            pose.pose.position.y = point.y;
                            // pose.pose.position.z = point.z;
-
                            return pose;
                        });
         return msg;
