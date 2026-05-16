@@ -44,88 +44,96 @@ void phoenix_contours_to_gps_logger::contours_cb(phnx_msgs::msg::Contours::Share
     if (msg->left_contour.empty() && msg->right_contour.empty()) {
         RCLCPP_WARN(this->get_logger(), "Received empty polynomial (non-AI)");
         return;
-    }
-    std::vector<geometry_msgs::msg::Vector3> left = msg->left_contour;
-    std::vector<geometry_msgs::msg::Vector3> right = msg->right_contour;
 
-    std::vector<cv::Point2d> cv_points_left;
-    std::vector<cv::Point2d> cv_points_right;
+    } else {
+        std::vector<geometry_msgs::msg::Vector3> left = msg->left_contour;
+        std::vector<geometry_msgs::msg::Vector3> right = msg->right_contour;
 
-    for (const auto& vec : left) {
-        cv_points_left.emplace_back(vec.x, vec.y);  // Efficient in-place construction
-    }
+        std::vector<cv::Point2d> cv_points_left;
+        std::vector<cv::Point2d> cv_points_right;
 
-    for (const auto& vec : right) {
-        cv_points_right.emplace_back(vec.x, vec.y);  // Efficient in-place construction
-    }
-
-    std::string p = "left contour size " + std::to_string(left.size());
-    RCLCPP_INFO(this->get_logger(), p.c_str());
-
-    p = "right contour size " + std::to_string(right.size());
-    RCLCPP_INFO(this->get_logger(), p.c_str());
-
-    //std::string frame_id = this->get_parameter("camera_frame").as_string();
-    //std::string frame_id = "notemptystring";
-    // TODO camera frame_id is wrong
-    auto frame_id = this->get_parameter(std::string("camera_frame")).as_string();
-    std::optional<nav_msgs::msg::Path> left_ground_contours_optional =
-        backend::create_path(cv_points_left, camera_rgb, frame_id);
-    nav_msgs::msg::Path left_ground_contours;
-
-    std::optional<nav_msgs::msg::Path> right_ground_contours_optional =
-        backend::create_path(cv_points_right, camera_rgb, frame_id);
-    nav_msgs::msg::Path right_ground_contours;
-
-    if (path_optional.has_value()) {
-        path = path_optional.value();
-        std::string p = std::to_string(path.poses.size());
-        RCLCPP_INFO(this->get_logger(), p.c_str());
-        path.header.frame_id = this->get_parameter(std::string("camera_frame")).as_string();
-        path.header.stamp = this->get_clock()->now();
-
-        try {
-            // After you have the path in the 'map' frame:
-            // path is nav_msgs::msg::Path with header.frame_id = "map"
-
-            if (to_ll_client_->service_is_ready()) {
-                // You can publish both left and right boundaries as GPS paths
-                geographic_msgs::msg::GeoPath gps_path;
-                gps_path.header.stamp = path.header.stamp;
-                gps_path.header.frame_id = "gps";  // or "geodetic"
-
-                for (const auto& pose : path.poses) {
-                    auto request = std::make_shared<ToLL::Request>();
-                    request->map_point = pose.pose.position;  // x,y,z in map frame
-
-                    // Use async client to avoid blocking the callback
-                    auto future = to_ll_client_->async_send_request(
-                        request, [&gps_path, this, pub](rclcpp::Client<ToLL>::SharedFuture result) {
-                            auto response = result.get();
-                            if (response) {
-                                gps_path.points.push_back(response->ll_point);
-                            } else {
-                                RCLCPP_WARN(get_logger(), "toLL call failed");
-                            }
-                        });
-
-                    // Spin until all futures complete? Simpler: use synchronous call if few points.
-                    // For demonstration, I'll show a synchronous version that is easier to integrate:
-                }
-            }
-        } catch (tf2::LookupException& e) {
-            RCLCPP_INFO(this->get_logger(), "Could not look up odom!");
-            return;
+        for (const auto& vec : left) {
+            cv_points_left.emplace_back(vec.x, vec.y);  // Efficient in-place construction
         }
 
-        this->gps_path_pub_->publish(gps_path);  // error invalid operator *path
-                                                 // Extract and print coefficients
-        // RCLCPP_INFO(this->get_logger(), "Received Polynomial Coefficients:");
-    } else {
-        std::string p = " error no path ";
-        RCLCPP_INFO(this->get_logger(), p.c_str());
-    }
-    return;
+        for (const auto& vec : right) {
+            cv_points_right.emplace_back(vec.x, vec.y);  // Efficient in-place construction
+        }
 
-    // this->pub->publish(*msg);
+        std::string p = "left contour size " + std::to_string(left.size());
+        RCLCPP_INFO(this->get_logger(), p.c_str());
+
+        p = "right contour size " + std::to_string(right.size());
+        RCLCPP_INFO(this->get_logger(), p.c_str());
+
+        //std::string frame_id = this->get_parameter("camera_frame").as_string();
+        //std::string frame_id = "notemptystring";
+        // TODO camera frame_id is wrong
+        auto frame_id = this->get_parameter(std::string("camera_frame")).as_string();
+        std::optional<nav_msgs::msg::Path> left_ground_contours_optional =
+            backend::create_path(cv_points_left, camera_rgb, frame_id);
+        std::optional<nav_msgs::msg::Path> right_ground_contours_optional =
+            backend::create_path(cv_points_right, camera_rgb, frame_id);
+
+        process(left_ground_contours_optional, "left", gps_left_pub_);
+        process(right_ground_contours_optional, "right", gps_right_pub_);
+        return;
+    }
 }
+
+// Helper lambda to process a single boundary (left or right)
+// (This eliminates the need for the broken path_optional/path variables)
+auto process = [&](std::optional<nav_msgs::msg::Path>& opt, const std::string& name,
+                   rclcpp::Publisher<geographic_msgs::msg::GeoPath>::SharedPtr pub) {
+    if (!opt.has_value()) {
+        RCLCPP_WARN(this->get_logger(), "%s boundary path empty", name.c_str());
+        return;
+    }
+    nav_msgs::msg::Path path = opt.value();
+    path.header.frame_id = this->get_parameter(std::string("camera_frame")).as_string();
+    path.header.stamp = this->get_clock()->now();
+
+    // TRANSFORM TO MAP FRAME (was "odom" before; now must be "map")
+    try {
+        std::string map_frame = this->get_parameter("path_frame").as_string();  // now "map"
+        auto trans = this->tf2_buffer->lookupTransform(map_frame, path.header.frame_id, rclcpp::Time{});
+        for (auto& pose : path.poses) {
+            tf2::doTransform(pose, pose, trans);
+            pose.header.frame_id = map_frame;
+            pose.header.stamp = path.header.stamp;
+        }
+        path.header.frame_id = map_frame;
+    } catch (tf2::LookupException& e) {
+        RCLCPP_INFO(this->get_logger(), "Could not look up %s: %s", name.c_str(), e.what());
+        return;
+    }
+
+    // GPS CONVERSION (NEW)
+    if (!to_ll_client_->service_is_ready()) {
+        RCLCPP_WARN(this->get_logger(), "toLL not ready for %s", name.c_str());
+        return;
+    }
+
+    geographic_msgs::msg::GeoPath gps_path;
+    gps_path.header = path.header;
+    gps_path.header.frame_id = "gps";
+
+    for (const auto& pose : path.poses) {
+        auto request = std::make_shared<ToLL::Request>();
+        request->map_point = pose.pose.position;  // x,y,z in map frame
+
+        // Use async client to avoid blocking the callback
+        auto future = to_ll_client_->async_send_request(request);
+        if (future.wait_for(std::chrono::milliseconds(20)) == std::future_status::ready) {
+            auto response = future.get();
+            gps_path.points.push_back(response->ll_point);
+        } else {
+            RCLCPP_WARN(this->get_logger(), "%s: toLL timeout", name.c_str());
+        }
+    }
+
+    if (!gps_path.points.empty()) {
+        pub->publish(gps_path);
+        RCLCPP_INFO(this->get_logger(), "Published %zu GPS points for %s", gps_path.points.size(), name.c_str());
+    }
+};  // end lambda
